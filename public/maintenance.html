@@ -100,7 +100,11 @@ nav a{color:var(--pine2);text-decoration:none;font-weight:600}
 .seg button.sel[data-k=status][data-key=done]{background:var(--done);border-color:var(--done);color:#fff}
 .seg button.sel[data-k=status][data-key=wont]{background:var(--wont);border-color:var(--wont);color:#fff}
 .seg button.sel[data-k=prio]{background:var(--spruce);border-color:var(--spruce);color:#fff}
-input[type=text],textarea{width:100%;font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;color:var(--ink)}
+input[type=text],input[type=datetime-local],textarea{width:100%;font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;color:var(--ink)}
+.dtwrap{display:flex;gap:6px;align-items:stretch}
+.nowbtn{flex:none;font:inherit;font-size:12px;font-weight:600;color:var(--pine2);background:#fff;border:1px solid var(--line);border-radius:9px;padding:0 11px;cursor:pointer}
+.worked{background:#eef2f6;border:1px solid #cfdbe3;border-radius:10px;padding:10px 12px;font-size:13.5px;margin:8px 0}
+.worked .lbl{font-size:11px;color:var(--pine2);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:3px}
 textarea{min-height:52px;resize:vertical}
 input:focus,textarea:focus{outline:2px solid var(--pine2);outline-offset:1px;background:#fff}
 .save{font:inherit;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;color:#fff;background:var(--spruce);border:0;border-radius:11px;padding:11px 20px;cursor:pointer}
@@ -142,7 +146,8 @@ const API='/.netlify/functions/airtable';
 const F={fixNotes:'fld0ySTAz7IwQ6gys',notes:'flddOS4VpM1ZNFkdx',needsFixing:'fld1tdDipneoCHk5Z',
   cleaner:'fldlPGZHTcOIL4DvO',startAt:'fldy5fzkRiO3WQgd9',
   mStatus:'fld1XHyJRgSstFmxO',priority:'fldoCrKTXVRW1UX5J',assigned:'fldeaalnwAPlZZ5XP',
-  resolvedDate:'fldPq2vqWietaxfgq',resolutionNotes:'fld6ypazIXO4JuPc0',updates:'fldW1sJZ0OW1jRpXq',repairOnly:'fld5vuhp9PnESnelw'};
+  resolvedDate:'fldPq2vqWietaxfgq',resolutionNotes:'fld6ypazIXO4JuPc0',updates:'fldW1sJZ0OW1jRpXq',repairOnly:'fld5vuhp9PnESnelw',
+  workStart:'fldwbVnyXg3AzjG0K',workEnd:'fldW5iJ2sg9jhJT5Z'};
 const STATUS={OPEN:'Nové (Open)',PROG:'Probíhá (In Progress)',DONE:'Vyřešeno (Resolved)',WONT:'Neopravovat (Won\u2019t Fix)'};
 const STATUS_LIST=[STATUS.OPEN,STATUS.PROG,STATUS.DONE,STATUS.WONT];
 const PRIOS=['Vysoká (High)','Střední (Medium)','Nízká (Low)'];
@@ -173,6 +178,15 @@ function optLabel(s){if(!s)return '';const m=String(s).match(/^(.*?)\s*\((.*)\)\
 function shortCs(s){return String(s||'').split(' (')[0];}
 function locale(){return LANG==='en'?'en-GB':'cs-CZ';}
 function stamp(){const d=new Date();return d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getFullYear();}
+const pad2=n=>String(n).padStart(2,'0');
+// ISO (UTC) -> value for <input type=datetime-local> in the viewer's local time
+function toLocalInput(iso){if(!iso)return '';const d=new Date(iso);if(isNaN(d))return '';return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'T'+pad2(d.getHours())+':'+pad2(d.getMinutes());}
+function nowLocalInput(){return toLocalInput(new Date().toISOString());}
+// datetime-local string ("YYYY-MM-DDTHH:mm", local) -> ISO for Airtable, or null if blank
+function localInputToISO(v){if(!v)return null;const d=new Date(v);return isNaN(d)?null:d.toISOString();}
+function fmtDT(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleString(locale(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}
+function durationText(a,b){const ms=new Date(b)-new Date(a);if(!(ms>0))return '';const mins=Math.round(ms/60000),h=Math.floor(mins/60),m=mins%60;if(h&&m)return h+' h '+m+' min';if(h)return h+' h';return m+' min';}
+function workedText(a,b){if(a&&b){const d=durationText(a,b);return esc(fmtDT(a))+' → '+esc(fmtDT(b))+(d?' · <b>'+esc(d)+'</b>':'');}if(a)return T('Začátek: ','Started: ')+esc(fmtDT(a));if(b)return T('Konec: ','Finished: ')+esc(fmtDT(b));return '';}
 function woRef(id){return '#'+String(id).slice(-4).toUpperCase();}
 const PEOPLE=[{name:'Peter',cs:'Šéf',en:'Boss'},{name:'Romana',cs:'Kancelář',en:'Office'},{name:'Amy',cs:'Registrace',en:'Registration'},{name:'Radim',cs:'Údržbář',en:'Maintenance'}];
 function peopleChips(fill){return `<div class="people">${PEOPLE.map(p=>`<button type="button" class="pchip" data-fill="${fill}" data-name="${esc(p.name)}"><b>${esc(p.name)}</b> · ${esc(T(p.cs,p.en))}</button>`).join('')}</div>`;}
@@ -298,6 +312,7 @@ function card(x){
   const f=x.fields,st=statusOf(f),k=statusKey(st);
   const date=f[F.startAt]?new Date(f[F.startAt]).toLocaleDateString(locale(),{day:'numeric',month:'short',year:'numeric'}):'—';
   const prio=selName(f[F.priority]),assigned=f[F.assigned]||'',resNotes=f[F.resolutionNotes]||'';
+  const wStart=f[F.workStart]||'',wEnd=f[F.workEnd]||'';
   const resDate=f[F.resolvedDate]?new Date(f[F.resolvedDate]).toLocaleDateString(locale()):'';
   const cleaner=f[F.cleaner]||'—',genNotes=f[F.notes]||'';
   const ups=parseUpdates(f);
@@ -313,6 +328,7 @@ function card(x){
     <div class="desc"><div class="who">${T('Popis závady','Reported problem')}</div>${esc(userText(f[F.fixNotes])||T('(bez popisu)','(no description)'))}</div>
     ${genNotes?`<div class="statenote">📝 ${T('Poznámka z úklidu','Cleaning note')}: ${esc(userText(genNotes))}</div>`:''}
     ${resNotes?`<div class="repaired"><div class="lbl">${T('Co bylo opraveno','What was repaired')}${resDate?' · '+resDate:''}</div>${esc(userText(resNotes))}</div>`:''}
+    ${(wStart||wEnd)?`<div class="worked"><div class="lbl">⏱ ${T('Odpracovaný čas','Time worked')}</div>${workedText(wStart,wEnd)}</div>`:''}
     ${tl}
     <button class="toggle" data-toggle>${T('Aktualizovat / upravit','Update / edit')} ▾</button>
     <div class="controls">
@@ -333,6 +349,11 @@ function card(x){
         <textarea data-in="update" placeholder="${T('Např.: objednány náhradní díly…','e.g. spare parts ordered…')}"></textarea>
         <div data-uperr style="display:none;color:var(--barn);font-size:12px;margin-top:5px"></div>
       </div>
+      <div class="row">
+        <div class="field"><label>⏱ ${T('Práce od (začátek)','Work started')}</label><div class="dtwrap"><input type="datetime-local" data-in="wstart" value="${toLocalInput(f[F.workStart])}"><button type="button" class="nowbtn" data-now="wstart">${T('teď','now')}</button></div></div>
+        <div class="field"><label>⏱ ${T('Práce do (konec)','Work finished')}</label><div class="dtwrap"><input type="datetime-local" data-in="wend" value="${toLocalInput(f[F.workEnd])}"><button type="button" class="nowbtn" data-now="wend">${T('teď','now')}</button></div></div>
+      </div>
+      <div data-timeerr style="display:none;color:var(--barn);font-size:12px;margin:-4px 0 10px"></div>
       <div class="field full" style="margin-bottom:10px"><label>${T('Co bylo opraveno (shrnutí)','What was repaired (summary)')}</label><textarea data-in="resnotes" placeholder="${T('Finální popis opravy…','Final description of the fix…')}">${esc(resNotes)}</textarea></div>
       <div style="display:flex;align-items:center"><button class="save" data-save>${T('Uložit','Save')}</button><span class="saved" data-msg style="display:none">${T('Uloženo ✓','Saved ✓')}</span></div>
     </div>
@@ -348,6 +369,7 @@ function wire(x){
   root.querySelectorAll('[data-in=assigned],[data-in=upname]').forEach(inp=>inp.addEventListener('input',markChips));
   markChips();
   root.querySelector('[data-toggle]').onclick=e=>{const c=root.querySelector('.controls');c.classList.toggle('show');e.target.textContent=(c.classList.contains('show')?T('Skrýt','Hide')+' ▴':T('Aktualizovat / upravit','Update / edit')+' ▾');};
+  root.querySelectorAll('[data-now]').forEach(b=>b.onclick=()=>{const inp=root.querySelector('[data-in="'+b.dataset.now+'"]');if(inp)inp.value=nowLocalInput();});
   root.querySelectorAll('.seg').forEach(seg=>{
     seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{seg.querySelectorAll('button').forEach(o=>o.classList.remove('sel'));b.classList.add('sel');pending[b.dataset.k]=b.dataset.v;});
   });
@@ -363,10 +385,19 @@ function wire(x){
       errEl.textContent=T('Zadejte své jméno k aktualizaci.','Enter your name for the update.');
       errEl.style.display='block';root.querySelector('[data-in=upname]').focus();return;
     }
+    const wStartISO=localInputToISO(root.querySelector('[data-in=wstart]').value);
+    const wEndISO=localInputToISO(root.querySelector('[data-in=wend]').value);
+    const timeErr=root.querySelector('[data-timeerr]');if(timeErr)timeErr.style.display='none';
+    if(wStartISO && wEndISO && new Date(wEndISO)<=new Date(wStartISO)){
+      if(timeErr){timeErr.textContent=T('Konec práce musí být po začátku.','Work finished must be after work started.');timeErr.style.display='block';}
+      return;
+    }
     btn.disabled=true;btn.textContent=T('Ukládám…','Saving…');
     const f={};
     if(status)f[F.mStatus]=status;
     if(prio)f[F.priority]=prio;
+    f[F.workStart]=wStartISO;
+    f[F.workEnd]=wEndISO;
     f[F.assigned]=root.querySelector('[data-in=assigned]').value.trim();
     f[F.resolutionNotes]=root.querySelector('[data-in=resnotes]').value.trim();
     if(status===STATUS.DONE && !x.fields[F.resolvedDate])f[F.resolvedDate]=new Date().toISOString().slice(0,10);
