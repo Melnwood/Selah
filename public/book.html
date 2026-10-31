@@ -144,7 +144,7 @@ textarea{min-height:70px;resize:vertical}
         <h1><span class="cs-only">Rezervace Rubenky</span><span class="en-only">Book the cabin</span></h1>
       </div>
     </div>
-    <div class="staffnote">🔑 <span class="cs-only">Rezervace je pouze pro pracovníky JV. Po odeslání žádost potvrdí Amy.</span><span class="en-only">Booking is for JV staff only. Amy confirms each request after you submit.</span></div>
+    <div class="staffnote"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="8" cy="15" r="4.2"/><path d="M11 12l8.5-8.5M16 4l3 3M14 6l2.5 2.5"/></svg> <span class="cs-only">Rezervace je pouze pro pracovníky JV. Po odeslání žádost potvrdí Amy.</span><span class="en-only">Booking is for JV staff only. Amy confirms each request after you submit.</span></div>
   </header>
 
   <div id="form">
@@ -372,7 +372,7 @@ function guestRow(){
     <div class="grow2">
       <label class="chk"><input type="checkbox" class="gk"> ${T('dítě (0–12)','child (0–12)')}</label>
       <label class="chk age" hidden>${T('věk','age')} <select class="ga">${Array.from({length:13},(_,i)=>`<option value="${i}">${i}</option>`).join('')}</select></label>
-      <label class="chk crib" hidden><input type="checkbox" class="gc"> 🛏️ ${T('vlastní postýlka – bez lůžka','own crib – no bed')}</label>
+      <label class="chk crib" hidden><input type="checkbox" class="gc"> ${T('vlastní postýlka – bez lůžka','own crib – no bed')}</label>
     </div>`;
   const gk=row.querySelector('.gk'),ga=row.querySelector('.ga'),gc=row.querySelector('.gc');
   const ageWrap=row.querySelector('.age'),cribWrap=row.querySelector('.crib');
@@ -541,7 +541,7 @@ async function submit(){
 function showDone(name){
   document.getElementById('form').hidden=true;
   const d=document.getElementById('done');d.hidden=false;
-  d.innerHTML=`<div class="ok"><div class="big">🌲</div><h2>${T('Žádost odeslána!','Request sent!')}</h2>
+  d.innerHTML=`<div class="ok"><div class="big"><svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="#2f5d4a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.3l2.7 2.7L16 9"/></svg></div><h2>${T('Žádost odeslána!','Request sent!')}</h2>
     <p>${T('Děkujeme, '+esc(name)+'. Amy vaši žádost o rezervaci zkontroluje a potvrdí e-mailem.','Thanks, '+esc(name)+'. Amy will review your request and confirm by email.')}</p>
     <p style="font-size:13px;color:var(--soft)">${human(CI)} → ${human(CO)} · ${nights()} ${T('nocí','nights')}</p></div>`;
   window.scrollTo({top:0,behavior:'smooth'});

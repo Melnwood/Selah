@@ -451,8 +451,8 @@ function paymentSection(){
       <div class="ministat" style="flex:2"><div class="n" style="font-size:14px;line-height:1.2">${since}</div><div class="l">${T('Od posledního inkasa','Since last collected')}</div></div>
     </div>
     <div style="font-size:12px;color:var(--soft);margin:2px 0 8px">${T('Rezervace k zaúčtování na JV účty — od posledního inkasovaného hosta po dnešek. Po zaúčtování označte posledního hosta.','Bookings to charge to JV accounts — from the last collected guest through today. After charging, mark the last guest.')}</div>
-    ${out.length?`<button type="button" class="copybtn" data-copybk="1">📋 ${T('Kopírovat pro účetní','Copy for accountant')}</button>`:''}
-    ${out.length?out.map(bkCard).join(''):`<div class="empty">${T('Nic k inkasu. 🎉','Nothing to collect. 🎉')}</div>`}`;
+    ${out.length?`<button type="button" class="copybtn" data-copybk="1"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg> ${T('Kopírovat pro účetní','Copy for accountant')}</button>`:''}
+    ${out.length?out.map(bkCard).join(''):`<div class="empty">${T('Nic k inkasu.','Nothing to collect.')}</div>`}`;
   return section('payment','p',ICO.p,T('Platby za rezervace','Booking payments'),total?('$'+total.toLocaleString('en-US')):'0',total>0,body);
 }
 function bkCard(x){
@@ -523,7 +523,7 @@ function monthTable(){
   }</tbody></table>`;
 }
 function woPanel(list){
-  if(!list.length)return `<div class="empty">${T('Žádné otevřené zakázky. 🌲','No open work orders. 🌲')}</div>`;
+  if(!list.length)return `<div class="empty">${T('Žádné otevřené zakázky.','No open work orders.')}</div>`;
   const now=new Date();
   return `<div class="wolist">${list.map(x=>{const age=daysBetween(whenOf(x),now);const k=statusKey(statusOf(x.fields));
     return `<div class="woitem" data-open="wo" data-id="${x.id}" tabindex="0"><span class="ref">${woRef(x.id)}</span><span class="chip2 c-${k}">${esc(optLabel(statusOf(x.fields)).toUpperCase())}</span><span class="txt">${esc(userText(x.fields[F.fixNotes])||'—')}</span><span class="age ${age>=14?'old':''}">${age} ${daysWord(age)}</span></div>`;}).join('')}</div>`;
@@ -532,7 +532,7 @@ function woRef(id){return '#'+String(id).slice(-4).toUpperCase();}
 
 function upcomingBody(){
   if(!BK_LOADED)return `<div class="empty">${T('Načítám…','Loading…')}</div>`;
-  if(BK_ERR)return `<div class="notice" style="border-color:var(--barn);color:var(--barn)">⚠ ${T('Rezervace se nepodařilo načíst.','Couldn\'t load bookings.')}</div>`;
+  if(BK_ERR)return `<div class="notice" style="border-color:var(--barn);color:var(--barn)">${T('Rezervace se nepodařilo načíst.','Couldn\'t load bookings.')}</div>`;
   const list=upcomingBookings();
   if(!list.length)return `<div class="empty">${T('Žádné pronájmy v příštích 30 dnech.','No rentals in the next 30 days.')}</div>`;
   return `<div class="rentlist">${list.map(x=>{const f=x.fields;const both=/apartm|Apartment/i.test(selName(f[BF.space])||'');
@@ -561,7 +561,7 @@ function cleaningCard(x){
   const f=x.fields;const paid=!!f[F.paid];const renter=f[F.renter]||'';
   return `<div class="card2" data-open="cleaning" data-id="${x.id}">
     <div class="r1"><span><span class="d">${dstr(whenOf(x))}</span>${renter?` · <b>${esc(renter)}</b>`:''}</span><span class="amt">${kc(money(f[F.totalOwed]))}</span></div>
-    <div class="meta">🧹 ${esc(f[F.cleaner]||'—')} · ${paid?`<span class="paidpill">✓ ${T('zaplaceno','paid')} ${f[F.paidDate]?dstr(f[F.paidDate]):''}</span>`:`<span class="unpaidpill">${T('nezaplaceno','unpaid')}</span>`}${(f[F.fines]||0)?` · <span class="fine">${T('pokuty','fines')} ${kc(f[F.fines])}</span>`:''}</div>
+    <div class="meta">${esc(f[F.cleaner]||'—')} · ${paid?`<span class="paidpill">✓ ${T('zaplaceno','paid')} ${f[F.paidDate]?dstr(f[F.paidDate]):''}</span>`:`<span class="unpaidpill">${T('nezaplaceno','unpaid')}</span>`}${(f[F.fines]||0)?` · <span class="fine">${T('pokuty','fines')} ${kc(f[F.fines])}</span>`:''}</div>
   </div>`;
 }
 function woCard(x){
@@ -569,7 +569,7 @@ function woCard(x){
   return `<div class="card2" data-open="wo" data-id="${x.id}">
     <div class="r1"><span><span style="font-family:'Space Mono',monospace;color:var(--pine2);font-weight:700">${woRef(x.id)}</span> <span class="chip2 c-${k}">${esc(optLabel(statusOf(f)).toUpperCase())}</span></span><span style="font-family:'Space Mono',monospace;font-size:12px;color:${age>=14?'var(--barn)':'var(--soft)'}">${T('otevřeno','open')} ${age} ${daysWord(age)}</span></div>
     <div class="meta" style="margin-top:6px;color:var(--ink);font-size:13.5px">${esc(userText(f[F.fixNotes])||'—')}</div>
-    <div class="meta">${T('Nahlásil/a','Reported by')} ${esc(f[F.cleaner]||'—')} · ${dstr(whenOf(x))}${f[F.assigned]?' · 👤 '+esc(f[F.assigned]):''}</div>
+    <div class="meta">${T('Nahlásil/a','Reported by')} ${esc(f[F.cleaner]||'—')} · ${dstr(whenOf(x))}${f[F.assigned]?' · '+esc(f[F.assigned]):''}</div>
   </div>`;
 }
 const CHECKS=[
